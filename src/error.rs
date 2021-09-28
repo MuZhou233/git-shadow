@@ -1,3 +1,2 @@
-pub use failure::{err_msg, Error};
-/// Result type
-pub type Result<T> = std::result::Result<T, Error>;
+pub use anyhow::Result;
+pub use anyhow::anyhow as err_msg;

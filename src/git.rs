@@ -4,7 +4,7 @@ use log::{debug, trace};
 use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, BufWriter, Write},
-    path::{Path, PathBuf},
+    path::{Path},
     process::Command,
 };
 
@@ -19,7 +19,7 @@ impl Git {
         let mut repo_dir = std::env::current_dir()?;
         while Repository::open(repo_dir.clone()).is_err() {
             if !repo_dir.pop() {
-                return Err(err_msg(
+                return Err(err_msg!(
                     "not a git repository (or any of the parent directories)",
                 ));
             }
@@ -37,7 +37,7 @@ impl Git {
     /// Return repository state
     pub fn state_clean(&self) -> Result<()> {
         if self.repo.state() != RepositoryState::Clean {
-            Err(err_msg("Repository state not clean"))
+            Err(err_msg!("Repository state not clean"))
         } else {
             Ok(())
         }
@@ -46,7 +46,7 @@ impl Git {
     /// modified & deleted & added file list
     pub fn get_uncommitted_files(&self) -> Result<Vec<String>> {
         if self.repo.state() != RepositoryState::Clean {
-            Err(err_msg("Repository state not clean"))
+            Err(err_msg!("Repository state not clean"))
         } else {
             let mut opt = StatusOptions::new();
             opt.show(git2::StatusShow::IndexAndWorkdir);
@@ -118,7 +118,7 @@ impl Git {
             .output()?;
 
         if output.stdout.len() > 0 {
-            return Err(err_msg(format!("{:?}", output.stdout)));
+            return Err(err_msg!("{:?}", output.stdout));
         }
 
         Ok(())
@@ -131,7 +131,7 @@ impl Git {
             .output()?;
 
         if output.stdout.len() > 0 {
-            return Err(err_msg(format!("{:?}", output.stdout)));
+            return Err(err_msg!("{:?}", output.stdout));
         }
 
         Ok(())
@@ -144,7 +144,7 @@ impl Git {
             .output()?;
 
         if output.stdout.len() > 0 {
-            return Err(err_msg(format!("{:?}", output.stdout)));
+            return Err(err_msg!("{:?}", output.stdout));
         }
 
         Ok(())

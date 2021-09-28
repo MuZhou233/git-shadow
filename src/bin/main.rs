@@ -9,30 +9,22 @@ fn main() -> git_shadow::Result<()> {
 
     logging::init(opt.verbose);
 
-    let repo = match Git::new() {
-        Ok(repo) => repo,
-        Err(e) => {
-            error!("{}", e);
-            return Ok(());
-        }
-    };
+    let repo = Git::new()?;
 
     match opt.cmd {
         arguments::OptCmd::Add { path } => {
             let path = path.canonicalize()?;
-            repo.state_clean()?;
-            if !path.is_file() {
-                error!("Currently only support single file");
-                return Ok(());
+            if !path.starts_with(repo.path()) {
+                return Err(err_msg!("Check your path!"));
             }
 
-            let mut paths = match repo.get_local_ignore() {
-                Ok(p) => p,
-                Err(e) => {
-                    error!("{}", e);
-                    return Ok(());
-                }
-            };
+            repo.state_clean()?;
+            
+            if !path.is_file() {
+                return Err(err_msg!("Currently only support single file"));
+            }
+
+            let mut paths = repo.get_local_ignore()?;
 
             paths.push(path.to_str().expect("Unsupported path").to_string());
             trace!("{:?}", paths);
@@ -51,18 +43,13 @@ fn main() -> git_shadow::Result<()> {
         }
         arguments::OptCmd::Restore { path } => {
             let path = path.canonicalize()?;
+            if !path.starts_with(repo.path()) {
+                return Err(err_msg!("Check your path!"));
+            }
+            
             repo.state_clean()?;
-            // if !path.is_file() {
-            //     error!("Currently only support single file");
-            // }
 
-            let mut paths = match repo.get_local_ignore() {
-                Ok(p) => p,
-                Err(e) => {
-                    error!("{}", e);
-                    return Ok(());
-                }
-            };
+            let mut paths = repo.get_local_ignore()?;
 
             if !paths.contains(&path.to_str().unwrap().to_string()) {
                 println!("Not shadowed");

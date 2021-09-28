@@ -11,7 +11,7 @@ readme = "README.md"
 [dependencies]
 structopt = "0.3"
 crossterm = "0.21"
-failure = "0.1.8"
+anyhow = "1.0"
 git2 = "0.13"
 log = "0.4.14"
 
