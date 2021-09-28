@@ -1,7 +1,7 @@
 use std::fs;
 
-use git_shadow::*;
 use git::Git;
+use git_shadow::*;
 use log::{error, trace};
 
 fn main() -> git_shadow::Result<()> {
@@ -13,23 +13,24 @@ fn main() -> git_shadow::Result<()> {
         Ok(repo) => repo,
         Err(e) => {
             error!("{}", e);
-            return Ok(())
+            return Ok(());
         }
     };
 
     match opt.cmd {
         arguments::OptCmd::Add { path } => {
+            let path = path.canonicalize()?;
             repo.state_clean()?;
             if !path.is_file() {
                 error!("Currently only support single file");
-                return Ok(())
+                return Ok(());
             }
 
             let mut paths = match repo.get_local_ignore() {
                 Ok(p) => p,
                 Err(e) => {
                     error!("{}", e);
-                    return Ok(())
+                    return Ok(());
                 }
             };
 
@@ -47,8 +48,9 @@ fn main() -> git_shadow::Result<()> {
             } else {
                 println!("Shadow completed but Nothing deleted")
             }
-        },
+        }
         arguments::OptCmd::Restore { path } => {
+            let path = path.canonicalize()?;
             repo.state_clean()?;
             // if !path.is_file() {
             //     error!("Currently only support single file");
@@ -58,23 +60,27 @@ fn main() -> git_shadow::Result<()> {
                 Ok(p) => p,
                 Err(e) => {
                     error!("{}", e);
-                    return Ok(())
+                    return Ok(());
                 }
             };
 
             if !paths.contains(&path.to_str().unwrap().to_string()) {
                 println!("Not shadowed");
-                return Ok(())
+                return Ok(());
             }
 
-            paths.swap_remove(paths.binary_search(&path.to_str().unwrap().to_string()).unwrap());
+            paths.swap_remove(
+                paths
+                    .binary_search(&path.to_str().unwrap().to_string())
+                    .unwrap(),
+            );
 
             repo.update_local_ignore(paths)?;
 
             repo.remove_skip_worktree(path.to_str().unwrap().to_string())?;
 
             repo.restore_file(path.to_str().unwrap().to_string())?;
-        },
+        }
         arguments::OptCmd::List => error!("Currently unsupported"),
         arguments::OptCmd::Manage => error!("Currently unsupported"),
     }

@@ -20,4 +20,7 @@ git commit -m "test"
 git shadow add test1
 git status
 ls
+git shadow restore test1
+git status
+ls
 ```

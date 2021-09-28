@@ -9,4 +9,4 @@ pub mod git;
 pub mod logging;
 
 mod error;
-pub use error::{Result, err_msg};
+pub use error::{err_msg, Result};
