@@ -1,10 +1,10 @@
 use std::fs;
 use std::path::Path;
 
-use dialoguer::Select;
+use dialoguer::{MultiSelect, Select};
 use git::Git;
 use git_shadow::*;
-use log::{error, trace};
+use log::trace;
 
 fn main() -> git_shadow::Result<()> {
     let opt = arguments::get_opt();
@@ -58,11 +58,10 @@ fn main() -> git_shadow::Result<()> {
                     .expect("internal error: failed to remove from index"),
             );
 
-            repo.update_local_ignore(path_list)?;
-
             repo.remove_skip_worktree(path_to_string(&path)?)?;
-
             repo.restore_file(path_to_string(&path)?)?;
+
+            repo.update_local_ignore(path_list)?;
         }
         arguments::OptCmd::List => {
             let path_list = repo.get_local_ignore()?;
@@ -81,7 +80,43 @@ fn main() -> git_shadow::Result<()> {
                 .paged(true)
                 .interact()?;
         }
-        arguments::OptCmd::Manage => error!("Currently unsupported"),
+        arguments::OptCmd::Manage => {
+            repo.state_clean()?;
+
+            let mut path_list = repo.get_local_ignore()?;
+
+            let mut show_list = vec!["PRESS SPACE TO SELECT | PRESS ENTER TO CONFIRM".to_string()];
+
+            for path in path_list.clone() {
+                if path.starts_with('#') {
+                    continue;
+                }
+                show_list.push(path);
+            }
+
+            let choosen = MultiSelect::new()
+                .items(&show_list)
+                .paged(true)
+                .interact()?;
+
+            for index in choosen {
+                if index == 0 {
+                    continue;
+                }
+                let path = show_list[index].clone();
+
+                path_list.swap_remove(
+                    path_list
+                        .binary_search(&path)
+                        .expect("internal error: failed to remove from index"),
+                );
+
+                repo.remove_skip_worktree(path.clone())?;
+                repo.restore_file(path)?;
+            }
+
+            repo.update_local_ignore(path_list)?;
+        }
     }
 
     Ok(())

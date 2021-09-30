@@ -39,9 +39,11 @@ impl Git {
     /// Error if path out of repo path.
     pub fn get_relative_path(&self, path: &Path) -> Result<PathBuf> {
         let absolute = path.absolute()?;
-        let root = self.path().parent()
+        let root = self
+            .path()
+            .parent()
             .expect("internal error: failed to get repo directory");
-            
+
         if absolute.is_inside(root) {
             if let Some(relative) = absolute.relative_to(root) {
                 return Ok(relative);

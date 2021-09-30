@@ -3,7 +3,7 @@ use structopt::StructOpt;
 
 /// This tool help you ignore files in your repositories locally
 #[derive(StructOpt)]
-#[structopt(name = "git shadow")]
+#[structopt(name = "git-shadow")]
 pub struct Opt {
     /// Verbose mode (-v, -vv, -vvv)
     #[structopt(short, long, parse(from_occurrences))]
@@ -32,7 +32,7 @@ pub enum OptCmd {
     },
     /// List shadowed file or folder
     List,
-    /// Open an interactive manager(unimplemented)
+    /// Open a list to select files to restore
     Manage,
 }
 
