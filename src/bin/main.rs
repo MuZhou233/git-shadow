@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use dialoguer::Editor;
+use dialoguer::Select;
 use git::Git;
 use git_shadow::*;
 use log::{error, trace};
@@ -52,7 +52,11 @@ fn main() -> git_shadow::Result<()> {
                 return Ok(());
             }
 
-            path_list.swap_remove(path_list.binary_search(&path_to_string(&path)?).unwrap());
+            path_list.swap_remove(
+                path_list
+                    .binary_search(&path_to_string(&path)?)
+                    .expect("internal error: failed to remove from index"),
+            );
 
             repo.update_local_ignore(path_list)?;
 
@@ -62,21 +66,20 @@ fn main() -> git_shadow::Result<()> {
         }
         arguments::OptCmd::List => {
             let path_list = repo.get_local_ignore()?;
-            let mut show = String::new();
-            let path_list_len = path_list.len();
+            let mut show_list = vec!["PRESS ENTER TO EXIT".to_string()];
 
             for path in path_list {
                 if path.starts_with('#') {
                     continue;
                 }
-                show.push_str(format!("{}\r\n", path).as_str());
+                show_list.push(path);
             }
 
-            if path_list_len > 10 {
-                Editor::new().edit(&show)?;
-            } else {
-                println!("{}", show);
-            }
+            Select::new()
+                .items(&show_list)
+                .default(0)
+                .paged(true)
+                .interact()?;
         }
         arguments::OptCmd::Manage => error!("Currently unsupported"),
     }
