@@ -5,7 +5,7 @@ use npath::NormPathExt;
 use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, BufWriter, Write},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 
@@ -35,25 +35,18 @@ impl Git {
         self.repo.path()
     }
 
-    ///
-    pub fn get_relative_path_string(&self, path: &Path) -> Result<String> {
-        let mut absolute = path
-            .absolute()?
-            .into_os_string()
-            .into_string()
-            .expect("Unsupported path");
-        let root = self
-            .path()
-            .parent()
-            .unwrap()
-            .to_path_buf()
-            .into_os_string()
-            .into_string()
-            .unwrap();
-        let relative = absolute.split_off(root.len())[1..].to_string();
-        // let path_str = path_str[1..].to_string();
-        assert_eq!(absolute, root);
-        Ok(relative)
+    /// Return relative path of repo path.
+    /// Error if path can not convert to string or out of repo path.
+    pub fn get_relative_path(&self, path: &Path) -> Result<PathBuf> {
+        let absolute = path.absolute()?;
+        let root = self.path().parent().unwrap();
+        if absolute.is_inside(root) {
+            if let Some(relative) = absolute.relative_to(root) {
+                return Ok(relative);
+            }
+        }
+
+        Err(err_msg!("Check your path"))
     }
 
     /// Return repository state
@@ -139,11 +132,12 @@ impl Git {
             .args(["update-index", "--skip-worktree", &path])
             .output()?;
 
-        if output.stdout.len() > 0 {
-            return Err(err_msg!("{:?}", output.stdout));
+        if output.stdout.is_empty() {
+            Ok(())
+        } else {
+            Err(err_msg!("{:?}", output.stdout))
         }
 
-        Ok(())
     }
 
     ///
@@ -152,11 +146,12 @@ impl Git {
             .args(["update-index", "--no-skip-worktree", &path])
             .output()?;
 
-        if output.stdout.len() > 0 {
-            return Err(err_msg!("{:?}", output.stdout));
+        if output.stdout.is_empty() {
+            Ok(())
+        } else {
+            Err(err_msg!("{:?}", output.stdout))
         }
 
-        Ok(())
     }
 
     ///
@@ -165,10 +160,10 @@ impl Git {
             .args(["checkout", "--", &path])
             .output()?;
 
-        if output.stdout.len() > 0 {
-            return Err(err_msg!("{:?}", output.stdout));
+        if output.stdout.is_empty() {
+            Ok(())
+        } else {
+            Err(err_msg!("{:?}", output.stdout))
         }
-
-        Ok(())
     }
 }
