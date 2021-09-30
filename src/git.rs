@@ -4,7 +4,7 @@ use log::{debug, trace};
 use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, BufWriter, Write},
-    path::{Path},
+    path::Path,
     process::Command,
 };
 

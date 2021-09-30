@@ -32,9 +32,7 @@ impl Log for SimpleLogger {
         );
 
         #[cfg(not(debug_assertions))]
-        print!(
-            "{}\n", record.args()
-        )
+        println!("{}", record.args())
     }
     fn flush(&self) {}
 }

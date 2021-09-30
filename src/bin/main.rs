@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::PathBuf;
 
 use git::Git;
 use git_shadow::*;
@@ -19,19 +20,19 @@ fn main() -> git_shadow::Result<()> {
             }
 
             repo.state_clean()?;
-            
+
             if !path.is_file() {
                 return Err(err_msg!("Currently only support single file"));
             }
 
             let mut paths = repo.get_local_ignore()?;
 
-            paths.push(path.to_str().expect("Unsupported path").to_string());
+            paths.push(path_to_string(&path)?);
             trace!("{:?}", paths);
 
             repo.update_local_ignore(paths)?;
 
-            repo.add_skip_worktree(path.to_str().unwrap().to_string())?;
+            repo.add_skip_worktree(path_to_string(&path)?)?;
 
             if path.is_dir() {
                 fs::remove_dir(path)?;
@@ -46,31 +47,34 @@ fn main() -> git_shadow::Result<()> {
             if !path.starts_with(repo.path()) {
                 return Err(err_msg!("Check your path!"));
             }
-            
+
             repo.state_clean()?;
 
             let mut paths = repo.get_local_ignore()?;
 
-            if !paths.contains(&path.to_str().unwrap().to_string()) {
+            if !paths.contains(&path_to_string(&path)?) {
                 println!("Not shadowed");
                 return Ok(());
             }
 
-            paths.swap_remove(
-                paths
-                    .binary_search(&path.to_str().unwrap().to_string())
-                    .unwrap(),
-            );
+            paths.swap_remove(paths.binary_search(&path_to_string(&path)?).unwrap());
 
             repo.update_local_ignore(paths)?;
 
-            repo.remove_skip_worktree(path.to_str().unwrap().to_string())?;
+            repo.remove_skip_worktree(path_to_string(&path)?)?;
 
-            repo.restore_file(path.to_str().unwrap().to_string())?;
+            repo.restore_file(path_to_string(&path)?)?;
         }
         arguments::OptCmd::List => error!("Currently unsupported"),
         arguments::OptCmd::Manage => error!("Currently unsupported"),
     }
 
     Ok(())
+}
+
+fn path_to_string(path: &PathBuf) -> Result<String> {
+    match path.clone().into_os_string().into_string() {
+        Ok(s) => Ok(s),
+        Err(_) => Err(err_msg!("Unsupported path")),
+    }
 }
