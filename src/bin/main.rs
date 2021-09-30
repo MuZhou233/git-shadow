@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use git::Git;
 use git_shadow::*;
-use log::{error, trace};
+use log::{debug, error, trace};
+use npath::{NormPathBufExt, NormPathExt};
 
 fn main() -> git_shadow::Result<()> {
     let opt = arguments::get_opt();
@@ -14,25 +15,28 @@ fn main() -> git_shadow::Result<()> {
 
     match opt.cmd {
         arguments::OptCmd::Add { path } => {
-            let path = path.canonicalize()?;
-            if !path.starts_with(repo.path()) {
+            repo.state_clean()?;
+
+            let path = path.absolute()?;
+            if !path.starts_with(repo.path().parent().unwrap()) {
+                debug!("required: {:?}, root: {:?}", path, repo.path());
                 return Err(err_msg!("Check your path!"));
             }
-
-            repo.state_clean()?;
 
             if !path.is_file() {
                 return Err(err_msg!("Currently only support single file"));
             }
 
-            let mut paths = repo.get_local_ignore()?;
+            let path_str = repo.get_relative_path_string(&path)?;
 
-            paths.push(path_to_string(&path)?);
-            trace!("{:?}", paths);
+            let mut path_list = repo.get_local_ignore()?;
 
-            repo.update_local_ignore(paths)?;
+            path_list.push(path_str.clone());
+            trace!("{:?}", path_list);
 
-            repo.add_skip_worktree(path_to_string(&path)?)?;
+            repo.update_local_ignore(path_list)?;
+
+            repo.add_skip_worktree(path_str)?;
 
             if path.is_dir() {
                 fs::remove_dir(path)?;
@@ -43,38 +47,34 @@ fn main() -> git_shadow::Result<()> {
             }
         }
         arguments::OptCmd::Restore { path } => {
-            let path = path.canonicalize()?;
-            if !path.starts_with(repo.path()) {
+            repo.state_clean()?;
+
+            let path = path.absolute()?;
+            if !path.starts_with(repo.path().parent().unwrap()) {
                 return Err(err_msg!("Check your path!"));
             }
 
-            repo.state_clean()?;
+            let path_str = repo.get_relative_path_string(&path)?;
+            trace!("path_str {}", path_str);
 
-            let mut paths = repo.get_local_ignore()?;
+            let mut path_list = repo.get_local_ignore()?;
 
-            if !paths.contains(&path_to_string(&path)?) {
+            if !path_list.contains(&path_str) {
                 println!("Not shadowed");
                 return Ok(());
             }
 
-            paths.swap_remove(paths.binary_search(&path_to_string(&path)?).unwrap());
+            path_list.swap_remove(path_list.binary_search(&path_str).unwrap());
 
-            repo.update_local_ignore(paths)?;
+            repo.update_local_ignore(path_list)?;
 
-            repo.remove_skip_worktree(path_to_string(&path)?)?;
+            repo.remove_skip_worktree(path_str.clone())?;
 
-            repo.restore_file(path_to_string(&path)?)?;
+            repo.restore_file(path_str)?;
         }
         arguments::OptCmd::List => error!("Currently unsupported"),
         arguments::OptCmd::Manage => error!("Currently unsupported"),
     }
 
     Ok(())
-}
-
-fn path_to_string(path: &PathBuf) -> Result<String> {
-    match path.clone().into_os_string().into_string() {
-        Ok(s) => Ok(s),
-        Err(_) => Err(err_msg!("Unsupported path")),
-    }
 }

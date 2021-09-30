@@ -1,6 +1,7 @@
 use crate::*;
 use git2::{Repository, RepositoryState, StatusOptions};
 use log::{debug, trace};
+use npath::NormPathExt;
 use std::{
     fs::OpenOptions,
     io::{BufRead, BufReader, BufWriter, Write},
@@ -32,6 +33,27 @@ impl Git {
     /// Return the path to `.git` folder
     pub fn path(&self) -> &Path {
         self.repo.path()
+    }
+
+    ///
+    pub fn get_relative_path_string(&self, path: &Path) -> Result<String> {
+        let mut absolute = path
+            .absolute()?
+            .into_os_string()
+            .into_string()
+            .expect("Unsupported path");
+        let root = self
+            .path()
+            .parent()
+            .unwrap()
+            .to_path_buf()
+            .into_os_string()
+            .into_string()
+            .unwrap();
+        let relative = absolute.split_off(root.len())[1..].to_string();
+        // let path_str = path_str[1..].to_string();
+        assert_eq!(absolute, root);
+        Ok(relative)
     }
 
     /// Return repository state
